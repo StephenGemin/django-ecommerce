@@ -1,0 +1,6 @@
+django
+django-allauth
+django-crispy-forms
+django-cleanup
+django-extensions
+django-debug-toolbar
