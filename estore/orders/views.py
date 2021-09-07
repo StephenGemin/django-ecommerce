@@ -1,13 +1,19 @@
 from django.shortcuts import render
-from django.views.generic import ListView
+from django.views.generic import ListView, TemplateView
 
 from .models import Item
 
 
-class ItemListView(ListView):
+class HomeView(ListView):
     model = Item
     template_name = "home-page.html"
+    paginate_by = 10
     context_object_name = "items"
 
-    def get_context_data(self):
-        return {"items": ["item1", "item2"]}
+
+class CheckoutView(TemplateView):
+    template_name = "checkout-page.html"
+
+
+class ProductPageView(TemplateView):
+    template_name = "product-page.html"

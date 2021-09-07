@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',  # allauth end
     'django_cleanup',
     'django_extensions',
+    'crispy_forms',
 
     # project apps
     'orders'
