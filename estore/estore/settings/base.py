@@ -104,7 +104,7 @@ STATIC_URL = '/static/'
 MEDIA_URL = '/media/'
 STATICFILES_DIRS = [BASE_DIR.joinpath('static')]
 STATIC_ROOT = BASE_DIR.joinpath('static_root')
-MEDIA_ROOT = BASE_DIR.joinpath('media_root')
+MEDIA_ROOT = BASE_DIR.joinpath('media')
 
 LOGIN_REDIRECT_URL = "/"
 

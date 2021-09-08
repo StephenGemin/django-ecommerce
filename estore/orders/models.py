@@ -1,3 +1,4 @@
+from PIL import Image
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
@@ -21,15 +22,14 @@ LABEL_CHOICES = (
 
 class Item(models.Model):
     """Individual item from store"""
-    title = models.CharField(max_length=200)
-    price = models.FloatField(validators=[MinValueValidator(0.0)])
-    price_discount = models.FloatField(
-        blank=True, null=True, validators=[MaxValueValidator(price)]
-    )
     category = models.CharField(choices=CATEGORY_CHOICES, max_length=30)
-    label = models.CharField(choices=LABEL_CHOICES, max_length=1)
-    slug = models.SlugField()
     description = models.TextField()
+    image = models.ImageField(default="image_missing.jpg", upload_to="inventory_pics")
+    label = models.CharField(choices=LABEL_CHOICES, max_length=1)
+    price = models.FloatField()
+    price_discount = models.FloatField(blank=True, null=True)
+    slug = models.SlugField()
+    title = models.CharField(max_length=200)
 
     def get_absolute_url(self):
         return reverse("orders:product", kwargs={"slug": self.slug})
