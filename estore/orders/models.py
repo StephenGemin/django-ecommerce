@@ -34,16 +34,25 @@ class Item(models.Model):
     def get_absolute_url(self):
         return reverse("orders:product", kwargs={"slug": self.slug})
 
+    def get_add_to_cart_url(self):
+        return reverse("orders:add-to-cart", kwargs={"slug": self.slug})
+
+    def get_remove_from_cart_url(self):
+        return reverse("orders:remove-from-cart", kwargs={"slug": self.slug})
+
     def __str__(self):
         return self.title
 
 
 class OrderItem(models.Model):
     """Link between Item and Order"""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
+    quantity = models.IntegerField(default=1)
+    ordered = models.BooleanField(default=False)
 
     def __str__(self):
-        return self.title
+        return f"{self.quantity} of {self.item.title}"
 
 
 class Order(models.Model):
@@ -55,4 +64,4 @@ class Order(models.Model):
     ordered = models.BooleanField(default=False)
 
     def __str__(self):
-        return self.user.username
+        return f"{self.user.username} ordered={self.ordered}"

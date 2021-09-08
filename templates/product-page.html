@@ -45,6 +45,7 @@
 
             <p>{{ item_obj.description }}</p>
 
+            {% comment %}
             <form class="d-flex justify-content-left">
               <!-- Default input -->
               <input type="number" value="1" aria-label="Search" class="form-control" style="width: 100px">
@@ -53,6 +54,15 @@
               </button>
 
             </form>
+            {% endcomment %}
+              <a class="btn btn-primary btn-md my-0 p" href="{{ item_obj.get_add_to_cart_url }}">
+                Add to cart
+                <i class="fas fa-shopping-cart ml-1"></i>
+              </a>
+              <a class="btn btn-danger btn-md my-0 p" href="{{ item_obj.get_remove_from_cart_url }}">
+                Remove from cart
+                <i class="fas fa-shopping-cart ml-1"></i>
+              </a>
 
           </div>
           <!--Content-->
