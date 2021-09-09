@@ -106,7 +106,6 @@ STATICFILES_DIRS = [BASE_DIR.joinpath('static')]
 STATIC_ROOT = BASE_DIR.joinpath('static_root')
 MEDIA_ROOT = BASE_DIR.joinpath('media')
 
-LOGIN_REDIRECT_URL = "/"
 
 # CRISPY FORMS
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
@@ -116,6 +115,7 @@ CRISPY_TEMPLATE_PACK = 'bootstrap4'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # django allauth
+LOGIN_REDIRECT_URL = "/"
 SITE_ID = 1
 AUTHENTICATION_BACKENDS = [
     # Needed to login by username in Django admin, regardless of `allauth`
