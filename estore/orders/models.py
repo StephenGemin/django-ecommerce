@@ -51,6 +51,38 @@ class OrderItem(models.Model):
     quantity = models.IntegerField(default=1)
     ordered = models.BooleanField(default=False)
 
+    def _is_discounted(self):
+        if self.item.price_discount is not None:
+            return True
+        return False
+
+    def get_item_price(self):
+        if self._is_discounted():
+            return self.item.price
+        return self.item.price_discount
+
+    def _get_total_item_price(self):
+        return self.quantity * self.item.price
+
+    def _get_total_discount_item_price(self):
+        if self._is_discounted():
+            return self.quantity * self.item.price_discount
+
+    def get_amount_saved(self):
+        if self._is_discounted():
+            return self._get_total_item_price() - self._get_total_discount_item_price()
+
+    def get_final_price(self):
+        if self._is_discounted():
+            return self._get_total_discount_item_price()
+        return self._get_total_item_price()
+
+    def get_increase_order_item_quantity_url(self):
+        return reverse("orders:incre-item-quantity", kwargs={"slug": self.item.slug})
+
+    def get_decrease_order_item_quantity_url(self):
+        return reverse("orders:decre-item-quantity", kwargs={"slug": self.item.slug})
+
     def __str__(self):
         return f"{self.quantity} of {self.item.title}"
 
@@ -62,6 +94,12 @@ class Order(models.Model):
     start_date = models.DateTimeField(auto_now_add=True)
     ordered_date = models.DateTimeField()
     ordered = models.BooleanField(default=False)
+
+    def get_total(self):
+        total = 0
+        for order_item in self.items.all():
+            total += order_item.get_final_price()
+        return total
 
     def __str__(self):
         return f"{self.user.username} ordered={self.ordered}"
