@@ -97,5 +97,8 @@ def increase_order_item_quantity(request, slug):
 @login_required
 def decrease_order_item_quantity(request, slug):
     order_item = _increment_order_item_quantity(request, slug, -1)
-    order_item.save()
+    if order_item.quantity == 0:
+        order_item.delete()
+    else:
+        order_item.save()
     return redirect("orders:order-summary")
