@@ -74,9 +74,9 @@
           <tr>
             <td colspan="5">
               {% if order_obj.get_total %}
-                <a class='btn btn-success float-right ml-2' href='#'>Proceed to checkout</a>
+                <a class='btn btn-success float-right ml-2' href="{% url 'orders:checkout-page' %}">Proceed to checkout</a>
               {% else %}
-                <a class='btn btn-success float-right ml-2 disabled' href='#'>Proceed to checkout</a>
+                <a class='btn btn-success float-right ml-2 disabled'>Proceed to checkout</a>
               {% endif %}
               <a class='btn btn-primary float-right' href="{% url 'orders:home-page' %}">Continue shopping</a>
             </td>

@@ -38,9 +38,10 @@ INSTALLED_APPS = [
     'django_cleanup',
     'django_extensions',
     'crispy_forms',
+    'django_countries',
 
     # project apps
-    'orders'
+    'orders',
 ]
 
 MIDDLEWARE = [

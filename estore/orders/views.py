@@ -3,10 +3,12 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render, get_object_or_404, redirect
+from django.urls import reverse_lazy
 from django.utils import timezone
-from django.views.generic import ListView, TemplateView, DetailView
+from django.views.generic import ListView, TemplateView, DetailView, FormView
 
-from .models import Item, OrderItem, Order
+from .forms import CheckoutForm
+from .models import Item, OrderItem, Order, BillingAddress
 
 
 class HomeView(ListView):
@@ -32,8 +34,56 @@ class OrderSummaryView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class CheckoutView(TemplateView):
+class CheckoutView(FormView):
     template_name = "checkout-page.html"
+    form_class = CheckoutForm
+    success_url = reverse_lazy("orders:home-page")  # TODO: replace with redirect to payment view
+
+    def _validate_form(self, form):
+        if form["billing_address"].value() == "123":
+            # This particular statement was added for testing purposes,
+            # but could easily be extended to verify fields
+            form.add_error("billing_address", "Invalid billing address")
+
+    def _validate_user_order(self):
+        try:
+            return _get_user_orders(self.request)
+        except ObjectDoesNotExist:
+            messages.error(self.request, "You do not have an active order")
+            return
+
+    def _get_billing_address_data(self, form):
+        return BillingAddress(
+            user=self.request.user,
+            address=form.cleaned_data.get("billing_address"),
+            address2=form.cleaned_data.get("billing_address2"),
+            country=form.cleaned_data.get("billing_country"),
+            postal_code=form.cleaned_data.get("billing_postal_code"),
+            # TODO: add functionality for these fields
+            # form.cleaned_data.get("same_shipping_address"),
+            # form.cleaned_data.get("set_default_billing"),
+        )
+
+    def post(self, request, *args, **kwargs):
+        """
+        Handle POST requests: instantiate a form instance with the passed
+        POST variables and then check if it's valid.
+        """
+        form = self.get_form()
+        self._validate_form(form)
+        if form.is_valid():
+            billing_address = self._get_billing_address_data(form)
+            billing_address.save()
+            order = self._validate_user_order()
+            order.billing_address = billing_address
+            order.save()
+            messages.success(self.request, "Order successful")
+
+            return self.form_valid(form)
+        else:
+            print(self.request.POST)
+            messages.error(self.request, "Order UNSUCCESSFUL")
+            return self.form_invalid(form)
 
 
 class ItemDetailView(DetailView):

@@ -1,7 +1,8 @@
 django
 django-allauth
-django-crispy-forms
 django-cleanup
-django-extensions
+django-crispy-forms
+django-countries
 django-debug-toolbar
+django-extensions
 Pillow

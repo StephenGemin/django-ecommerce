@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.db import models
-from django.db.models import CheckConstraint, Q
 from django.urls import reverse
+from django_countries.fields import CountryField
 
 CATEGORY_CHOICES = (
     ('All', 'All'),
@@ -92,6 +92,7 @@ class Order(models.Model):
     start_date = models.DateTimeField(auto_now_add=True)
     ordered_date = models.DateTimeField()
     ordered = models.BooleanField(default=False)
+    billing_address = models.ForeignKey('BillingAddress', on_delete=models.SET_NULL, blank=True, null=True)
 
     def get_total(self):
         total = 0
@@ -101,3 +102,14 @@ class Order(models.Model):
 
     def __str__(self):
         return f"{self.user.username} ordered={self.ordered}"
+
+
+class BillingAddress(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    address = models.CharField(max_length=100)
+    address2 = models.CharField(max_length=100)
+    country = CountryField(multiple=False)
+    postal_code = models.CharField(max_length=6, unique=False)  # TODO: make unique
+
+    def __str__(self):
+        return self.user.username
