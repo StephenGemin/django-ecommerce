@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
 from pathlib import Path
+from django.contrib.messages import constants as messages
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
@@ -136,4 +137,10 @@ SOCIALACCOUNT_PROVIDERS = {
             'key': ''
         }
     }
+}
+
+# https://stackoverflow.com/questions/41369105/django-bootstrap-alerts-not-working-as-expected
+# https://docs.djangoproject.com/en/3.0/ref/settings/#settings-messages
+MESSAGE_TAGS = {
+    messages.ERROR: 'danger',
 }

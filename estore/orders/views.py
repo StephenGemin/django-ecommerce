@@ -24,10 +24,10 @@ class OrderSummaryView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         try:
-            query_result = self.model.objects.get(user=self.request.user, ordered=False)
+            query_result = _get_user_orders(self.request)
             context[self.context_object_name] = query_result
         except ObjectDoesNotExist:
-            messages.warning(self.request, "You do not have an active order")
+            messages.error(self.request, "You do not have an active order")
             context[self.context_object_name] = None
         return context
 
@@ -42,8 +42,12 @@ class ItemDetailView(DetailView):
     context_object_name = "item_obj"
 
 
-def _get_user_orders(request):
+def _filter_user_orders(request):
     return Order.objects.filter(user=request.user, ordered=False)
+
+
+def _get_user_orders(request):
+    return Order.objects.get(user=request.user, ordered=False)
 
 
 @login_required
@@ -52,7 +56,7 @@ def add_to_cart(request, slug):
     order_item, order_item_created = OrderItem.objects.get_or_create(
         item=item, user=request.user, ordered=False
     )
-    order_qs = _get_user_orders(request)
+    order_qs = _filter_user_orders(request)
     if order_qs.exists():
         order = order_qs[0]  # only one order per user at a time?
         # check if order item is in the order

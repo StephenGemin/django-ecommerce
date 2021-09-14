@@ -1,6 +1,4 @@
-from PIL import Image
 from django.conf import settings
-from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.db.models import CheckConstraint, Q
 from django.urls import reverse
@@ -58,8 +56,8 @@ class OrderItem(models.Model):
 
     def get_item_price(self):
         if self._is_discounted():
-            return self.item.price
-        return self.item.price_discount
+            return self.item.price_discount
+        return self.item.price
 
     def _get_total_item_price(self):
         return self.quantity * self.item.price
