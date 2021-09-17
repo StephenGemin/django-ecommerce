@@ -31,7 +31,7 @@ class OrderSummaryView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         try:
-            query_result = _get_user_orders(self.request)
+            query_result = _get_user_order(self.request)
             context[self.context_object_name] = query_result
         except ObjectDoesNotExist:
             messages.error(self.request, "You do not have an active order")
@@ -61,6 +61,11 @@ class CheckoutView(LoginRequiredMixin, FormView):
             # form.cleaned_data.get("set_default_billing"),
         )
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["order_obj"] = _get_user_order(self.request)
+        return context
+
     def post(self, request, *args, **kwargs):
         """
         Handle POST requests: instantiate a form instance with the passed
@@ -71,7 +76,7 @@ class CheckoutView(LoginRequiredMixin, FormView):
         if form.is_valid():
             billing_address = self._get_billing_address_data(form)
             billing_address.save()
-            order = _get_user_orders(self.request)
+            order = _get_user_order(self.request)
             order.billing_address = billing_address
             order.save()
 
@@ -93,9 +98,14 @@ class StripePaymentView(LoginRequiredMixin, TemplateView):
         "STRIPE_PUBLIC_KEY": settings.STRIPE_PUBLIC_KEY
     }
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["order_obj"] = _get_user_order(self.request)
+        return context
+
     def post(self, *args, **kwargs):
         stripe.api_key = settings.STRIPE_SECRET_KEY
-        order = _get_user_orders(self.request)
+        order = _get_user_order(self.request)
         if order is None:
             return redirect("/")
         # `source` is obtained with Stripe.js; see https://stripe.com/docs/payments/accept-a-payment-charges#web-create-token
@@ -166,9 +176,19 @@ class StripePaymentView(LoginRequiredMixin, TemplateView):
 class PayPalPaymentView(LoginRequiredMixin, TemplateView):
     template_name = "payment_paypal_form.html"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["order_obj"] = _get_user_order(self.request)
+        return context
+
 
 class BitCoinPaymentView(LoginRequiredMixin, TemplateView):
     template_name = "payment_bitcoin_form.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["order_obj"] = _get_user_order(self.request)
+        return context
 
 
 class ItemDetailView(DetailView):
@@ -181,7 +201,7 @@ def _filter_user_orders(request):
     return Order.objects.filter(user=request.user, ordered=False)
 
 
-def _get_user_orders(request):
+def _get_user_order(request):
     try:
         return Order.objects.get(user=request.user, ordered=False)
     except ObjectDoesNotExist:
