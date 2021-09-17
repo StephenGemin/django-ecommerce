@@ -2,12 +2,7 @@ from django import forms
 from django_countries.fields import CountryField
 from django_countries.widgets import CountrySelectWidget
 
-PAYMENT_CHOICES = (
-    ("Stripe", "Stripe"),
-    ("PayPal", "PayPal"),
-    ("Credit", "Credit"),
-    ("BitCoin", "BitCoin"),
-)
+from . import constants
 
 
 class CheckoutForm(forms.Form):
@@ -67,5 +62,5 @@ class CheckoutForm(forms.Form):
 
     # TODO: temporary required value ... change back to True later
     payment_option = forms.ChoiceField(
-        choices=PAYMENT_CHOICES, required=False, widget=forms.RadioSelect()
+        choices=constants.PAYMENT_CHOICES, required=False, widget=forms.RadioSelect()
     )

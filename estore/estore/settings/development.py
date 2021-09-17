@@ -35,3 +35,6 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.environ.get("DJANGO_EMAIL_USER")
 EMAIL_HOST_PASSWORD = os.environ.get("DJANGO_EMAIL_PASS")
+
+STRIPE_PUBLIC_KEY = "pk_test_A7jK4iCYHL045qgjjfzAfPxu"  # pass into view context
+STRIPE_SECRET_KEY = "sk_test_Hrs6SAopgFPF0bZXSN3f6ELN"  # set to stripe.api_key

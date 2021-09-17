@@ -3,27 +3,15 @@ from django.db import models
 from django.urls import reverse
 from django_countries.fields import CountryField
 
-CATEGORY_CHOICES = (
-    ('All', 'All'),
-    ('Outerwear', 'Outerwear'),
-    ('Shirt', 'Shirt'),
-    ('Sport', 'Sport'),
-    ('Sportwear', 'Sport wear'),
-)
-
-LABEL_CHOICES = (
-    ('D', 'danger'),
-    ('P', 'primary'),
-    ('S', 'secondary'),
-)
+from . import constants
 
 
 class Item(models.Model):
     """Individual item from store"""
-    category = models.CharField(choices=CATEGORY_CHOICES, max_length=30)
+    category = models.CharField(choices=constants.CATEGORY_CHOICES, max_length=30)
     description = models.TextField()
     image = models.ImageField(default="image_missing.jpg", upload_to="inventory_pics")
-    label = models.CharField(choices=LABEL_CHOICES, max_length=1)
+    label = models.CharField(choices=constants.LABEL_CHOICES, max_length=1)
     price = models.FloatField()
     price_discount = models.FloatField(blank=True, null=True)
     slug = models.SlugField()
@@ -93,6 +81,7 @@ class Order(models.Model):
     ordered_date = models.DateTimeField()
     ordered = models.BooleanField(default=False)
     billing_address = models.ForeignKey('BillingAddress', on_delete=models.SET_NULL, blank=True, null=True)
+    payment = models.ForeignKey("Payment", on_delete=models.SET_NULL, blank=True, null=True)
 
     def get_total(self):
         total = 0
@@ -113,3 +102,16 @@ class BillingAddress(models.Model):
 
     def __str__(self):
         return self.user.username
+
+
+class Payment(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True)
+    payment_type = models.CharField(choices=constants.PAYMENT_CHOICES, max_length=50)
+    payment_obj = models.TextField()
+    payment_id = models.CharField(max_length=50)
+    amount = models.FloatField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} @ {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+

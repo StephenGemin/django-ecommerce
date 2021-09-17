@@ -6,3 +6,4 @@ django-countries
 django-debug-toolbar
 django-extensions
 Pillow
+stripe

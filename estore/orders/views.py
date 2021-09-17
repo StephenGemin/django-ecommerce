@@ -1,3 +1,6 @@
+import stripe
+from stripe import error as stripe_error
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -8,13 +11,14 @@ from django.utils import timezone
 from django.views.generic import ListView, TemplateView, DetailView, FormView
 
 from .forms import CheckoutForm
-from .models import Item, OrderItem, Order, BillingAddress
+from .models import Item, OrderItem, Order, BillingAddress, Payment
 
 
 class HomeView(ListView):
     model = Item
     template_name = "home-page.html"
     paginate_by = 10
+    ordering = ("price",)
     context_object_name = "items_obj"
 
 
@@ -34,23 +38,15 @@ class OrderSummaryView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class CheckoutView(FormView):
-    template_name = "checkout-page.html"
+class CheckoutView(LoginRequiredMixin, FormView):
     form_class = CheckoutForm
-    success_url = reverse_lazy("orders:home-page")  # TODO: replace with redirect to payment view
+    template_name = "checkout-page.html"
 
     def _validate_form(self, form):
         if form["billing_address"].value() == "123":
             # This particular statement was added for testing purposes,
             # but could easily be extended to verify fields
             form.add_error("billing_address", "Invalid billing address")
-
-    def _validate_user_order(self):
-        try:
-            return _get_user_orders(self.request)
-        except ObjectDoesNotExist:
-            messages.error(self.request, "You do not have an active order")
-            return
 
     def _get_billing_address_data(self, form):
         return BillingAddress(
@@ -74,16 +70,100 @@ class CheckoutView(FormView):
         if form.is_valid():
             billing_address = self._get_billing_address_data(form)
             billing_address.save()
-            order = self._validate_user_order()
+            order = _get_user_orders(self.request)
             order.billing_address = billing_address
             order.save()
-            messages.success(self.request, "Order successful")
 
+            payment_option = form.cleaned_data.get("payment_option").lower()
+            self.success_url = reverse_lazy(f"orders:payment-{payment_option}")
             return self.form_valid(form)
         else:
-            print(self.request.POST)
             messages.error(self.request, "Order UNSUCCESSFUL")
             return self.form_invalid(form)
+
+
+class StripePaymentView(LoginRequiredMixin, TemplateView):
+    template_name = "payment_stripe_form.html"
+    # Public key passed into context is ESSENTIAL.  Failure to do this will result
+    # in a CardError when processing payment
+    # this stupid step took a couple of hours to figure out
+    # Invalid request: Request req_6tE0kAQlyod8wY: Must provide source or customer.
+    extra_context = {
+        "STRIPE_PUBLIC_KEY": settings.STRIPE_PUBLIC_KEY
+    }
+
+    def post(self, *args, **kwargs):
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        order = _get_user_orders(self.request)
+        if order is None:
+            return redirect("/")
+        # `source` is obtained with Stripe.js; see https://stripe.com/docs/payments/accept-a-payment-charges#web-create-token
+        token = self.request.POST.get("stripeToken")
+        amount = order.get_total()
+
+        try:
+            # Stripe testing reference:  https://stripe.com/docs/testing
+            # Use Stripe's library to make requests...
+            charge = stripe.Charge.create(
+                # stripe requires integer in cents for decimal currencies
+                amount=int(amount * 100),
+                currency="usd",
+                source=token,
+                description="My First Test Charge (created for API docs)",
+            )
+        except stripe_error.CardError as e:
+            # Since it's a decline, stripe_error.CardError will be caught
+            messages.error(self.request, e)
+            return redirect("/")
+        except stripe_error.RateLimitError as e:
+            # Too many requests made to the API too quickly
+            messages.error(self.request, f"{e.__class__.__name__}: {e}")
+            return redirect("/")
+        except stripe_error.InvalidRequestError as e:
+            # Invalid parameters were supplied to Stripe's API
+            messages.error(self.request, f"Invalid request: {e}")
+            print(e.json_body)
+            print(e.http_body)
+            return redirect("/")
+        except stripe_error.AuthenticationError as e:
+            # Authentication with Stripe's API failed
+            # (maybe you changed API keys recently)
+            messages.error(self.request, f"{e.__class__.__name__}: {e}")
+            return redirect("/")
+        except stripe_error.APIConnectionError as e:
+            # Network communication with Stripe failed
+            messages.error(self.request, f"{e.__class__.__name__}: {e}")
+            return redirect("/")
+        except stripe_error.StripeError as e:
+            # Display a very generic error to the user, and maybe send
+            # yourself an email
+            messages.error(self.request, f"{e.__class__.__name__}: {e}")
+            return redirect("/")
+        except Exception as e:
+            # TODO: Send email to yourself
+            messages.error(self.request, "Very serious error occurred ... TBD")
+            return redirect("/")
+
+        payment = Payment(
+            user=self.request.user,
+            payment_type="Stripe",
+            payment_obj=charge,
+            payment_id=charge.get("id"),
+            amount=amount
+        )
+        payment.save()
+
+        order.ordered = True
+        order.payment = payment
+        order.save()
+        messages.success(
+            self.request, "Your payment was successful and your order is on the way!"
+        )
+        return redirect("/")  # TODO: redirect to payment success page
+
+
+class PayPalPaymentView(LoginRequiredMixin, TemplateView):
+    template_name = "payment_paypal_form.html"
 
 
 class ItemDetailView(DetailView):
@@ -97,7 +177,11 @@ def _filter_user_orders(request):
 
 
 def _get_user_orders(request):
-    return Order.objects.get(user=request.user, ordered=False)
+    try:
+        return Order.objects.get(user=request.user, ordered=False)
+    except ObjectDoesNotExist:
+        messages.error(request, "You do not have an active order")
+        return None
 
 
 @login_required
