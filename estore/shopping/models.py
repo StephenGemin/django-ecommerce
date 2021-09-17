@@ -18,13 +18,13 @@ class Item(models.Model):
     title = models.CharField(max_length=200)
 
     def get_absolute_url(self):
-        return reverse("orders:product", kwargs={"slug": self.slug})
+        return reverse("shopping:product", kwargs={"slug": self.slug})
 
     def get_add_to_cart_url(self):
-        return reverse("orders:add-to-cart", kwargs={"slug": self.slug})
+        return reverse("shopping:add-to-cart", kwargs={"slug": self.slug})
 
     def get_remove_from_cart_url(self):
-        return reverse("orders:remove-from-cart", kwargs={"slug": self.slug})
+        return reverse("shopping:remove-from-cart", kwargs={"slug": self.slug})
 
     def __str__(self):
         return self.title
@@ -64,10 +64,10 @@ class OrderItem(models.Model):
         return self._get_total_item_price()
 
     def get_increase_order_item_quantity_url(self):
-        return reverse("orders:incre-item-quantity", kwargs={"slug": self.item.slug})
+        return reverse("shopping:incre-item-quantity", kwargs={"slug": self.item.slug})
 
     def get_decrease_order_item_quantity_url(self):
-        return reverse("orders:decre-item-quantity", kwargs={"slug": self.item.slug})
+        return reverse("shopping:decre-item-quantity", kwargs={"slug": self.item.slug})
 
     def __str__(self):
         return f"{self.quantity} of {self.item.title}"

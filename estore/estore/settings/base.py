@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     'django_countries',
 
     # project apps
-    'orders',
+    'shopping',
 ]
 
 MIDDLEWARE = [

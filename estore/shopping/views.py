@@ -1,5 +1,3 @@
-import stripe
-from stripe import error as stripe_error
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -9,6 +7,9 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import ListView, TemplateView, DetailView, FormView
+
+import stripe
+from stripe import error as stripe_error
 
 from .forms import CheckoutForm
 from .models import Item, OrderItem, Order, BillingAddress, Payment
@@ -75,7 +76,7 @@ class CheckoutView(LoginRequiredMixin, FormView):
             order.save()
 
             payment_option = form.cleaned_data.get("payment_option").lower()
-            self.success_url = reverse_lazy(f"orders:payment-{payment_option}")
+            self.success_url = reverse_lazy(f"shopping:payment-{payment_option}")
             return self.form_valid(form)
         else:
             messages.error(self.request, "Order UNSUCCESSFUL")
@@ -166,6 +167,10 @@ class PayPalPaymentView(LoginRequiredMixin, TemplateView):
     template_name = "payment_paypal_form.html"
 
 
+class BitCoinPaymentView(LoginRequiredMixin, TemplateView):
+    template_name = "payment_bitcoin_form.html"
+
+
 class ItemDetailView(DetailView):
     model = Item
     template_name = "product-page.html"
@@ -202,7 +207,7 @@ def add_to_cart(request, slug):
     else:
         order = Order.objects.create(user=request.user, ordered_date=timezone.now())
         order.items.add(order_item)
-    return redirect("orders:product", slug=slug)
+    return redirect("shopping:product", slug=slug)
 
 
 def _increment_order_item_quantity(request, slug, value: int):
@@ -222,14 +227,14 @@ def remove_from_cart(request, slug):
     order_item.delete()
     msg = f"{order_item.item.title} was removed from your cart"
     messages.info(request, msg)
-    return redirect("orders:order-summary")
+    return redirect("shopping:order-summary")
 
 
 @login_required
 def increase_order_item_quantity(request, slug):
     order_item = _increment_order_item_quantity(request, slug, 1)
     order_item.save()
-    return redirect("orders:order-summary")
+    return redirect("shopping:order-summary")
 
 
 @login_required
@@ -239,4 +244,4 @@ def decrease_order_item_quantity(request, slug):
         order_item.delete()
     else:
         order_item.save()
-    return redirect("orders:order-summary")
+    return redirect("shopping:order-summary")
