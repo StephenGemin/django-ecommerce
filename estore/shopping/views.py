@@ -50,16 +50,17 @@ class CheckoutView(LoginRequiredMixin, FormView):
             form.add_error("billing_address", "Invalid billing address")
 
     def _get_billing_address_data(self, form):
-        return BillingAddress(
-            user=self.request.user,
-            address=form.cleaned_data.get("billing_address"),
-            address2=form.cleaned_data.get("billing_address2"),
-            country=form.cleaned_data.get("billing_country"),
-            postal_code=form.cleaned_data.get("billing_postal_code"),
+        _dict = {
+            "user": self.request.user,
+            "address": form.cleaned_data.get("billing_address"),
+            "address2": form.cleaned_data.get("billing_address2"),
+            "country": form.cleaned_data.get("billing_country"),
+            "postal_code": form.cleaned_data.get("billing_postal_code"),
             # TODO: add functionality for these fields
             # form.cleaned_data.get("same_shipping_address"),
             # form.cleaned_data.get("set_default_billing"),
-        )
+        }
+        return BillingAddress.objects.get_or_create(**_dict)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -74,10 +75,11 @@ class CheckoutView(LoginRequiredMixin, FormView):
         form = self.get_form()
         self._validate_form(form)
         if form.is_valid():
-            billing_address = self._get_billing_address_data(form)
-            billing_address.save()
+            bill_addr, created = self._get_billing_address_data(form)
+            if created:
+                bill_addr.save()
             order = _get_user_order(self.request)
-            order.billing_address = billing_address
+            order.billing_address = bill_addr
             order.save()
 
             payment_option = form.cleaned_data.get("payment_option").lower()
@@ -103,12 +105,23 @@ class StripePaymentView(LoginRequiredMixin, TemplateView):
         context["order_obj"] = _get_user_order(self.request)
         return context
 
+    def _update_order(self, order, payment):
+        order.ordered = True
+        order.payment = payment
+        order.save()
+
+    def _update_order_items(self, order):
+        order_items = order.items.all()
+        order_items.update(ordered=True)
+        for o_item in order_items:
+            o_item.save()
+
     def post(self, *args, **kwargs):
         stripe.api_key = settings.STRIPE_SECRET_KEY
         order = _get_user_order(self.request)
         if order is None:
-            return redirect("/")
-        # `source` is obtained with Stripe.js; see https://stripe.com/docs/payments/accept-a-payment-charges#web-create-token
+            return redirect("shopping:home-page")
+        # `source` is obtained with Stripe.js; see https://stripe.com/docs/payments/accept-a-payment-charges#web-create-token  # noqa: E501
         token = self.request.POST.get("stripeToken")
         amount = order.get_total()
 
@@ -125,7 +138,7 @@ class StripePaymentView(LoginRequiredMixin, TemplateView):
         except stripe_error.CardError as e:
             # Since it's a decline, stripe_error.CardError will be caught
             messages.error(self.request, e)
-            return redirect("/")
+            return redirect("shopping:payment-stripe")
         except stripe_error.RateLimitError as e:
             # Too many requests made to the API too quickly
             messages.error(self.request, f"{e.__class__.__name__}: {e}")
@@ -164,9 +177,8 @@ class StripePaymentView(LoginRequiredMixin, TemplateView):
         )
         payment.save()
 
-        order.ordered = True
-        order.payment = payment
-        order.save()
+        self._update_order(order, payment)
+        self._update_order_items(order)
         messages.success(
             self.request, "Your payment was successful and your order is on the way!"
         )
