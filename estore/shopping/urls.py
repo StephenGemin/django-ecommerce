@@ -7,6 +7,7 @@ app_name = 'shopping'
 urlpatterns = [
     path('', views.HomeView.as_view(), name="home-page"),
     path('checkout/', views.CheckoutView.as_view(), name="checkout-page"),
+    path('checkout/add-coupon/', views.AddCouponView.as_view(), name="add-coupon"),
     path('payment/stripe/', views.StripePaymentView.as_view(), name="payment-stripe"),
     path('payment/paypal', views.PayPalPaymentView.as_view(), name="payment-paypal"),
     path('payment/bitcoin', views.BitCoinPaymentView.as_view(), name="payment-bitcoin"),

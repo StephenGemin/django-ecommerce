@@ -6,13 +6,20 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
-from django.views.generic import ListView, TemplateView, DetailView, FormView
+from django.views import View
+from django.views.generic import (
+    ListView,
+    TemplateView,
+    DetailView,
+    FormView,
+)
 
 import stripe
 from stripe import error as stripe_error
 
-from .forms import CheckoutForm
-from .models import Item, OrderItem, Order, BillingAddress, Payment
+from . import db_util
+from .forms import CheckoutForm, CouponForm
+from .models import Item, OrderItem, Order, BillingAddress, Payment, Coupon
 
 
 class HomeView(ListView):
@@ -31,7 +38,7 @@ class OrderSummaryView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         try:
-            query_result = _get_user_order(self.request)
+            query_result = db_util.get_user_order(self.request)
             context[self.context_object_name] = query_result
         except ObjectDoesNotExist:
             messages.error(self.request, "You do not have an active order")
@@ -64,7 +71,12 @@ class CheckoutView(LoginRequiredMixin, FormView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["order_obj"] = _get_user_order(self.request)
+        _dict = {
+            "order_obj": db_util.get_user_order(self.request),
+            "coupon_form": CouponForm(),
+            "DISPLAY_COUPON_FORM": True,
+        }
+        context.update(_dict)
         return context
 
     def post(self, request, *args, **kwargs):
@@ -78,7 +90,7 @@ class CheckoutView(LoginRequiredMixin, FormView):
             bill_addr, created = self._get_billing_address_data(form)
             if created:
                 bill_addr.save()
-            order = _get_user_order(self.request)
+            order = db_util.get_user_order(self.request)
             order.billing_address = bill_addr
             order.save()
 
@@ -96,29 +108,21 @@ class StripePaymentView(LoginRequiredMixin, TemplateView):
     # in a CardError when processing payment
     # this stupid step took a couple of hours to figure out
     # Invalid request: Request req_6tE0kAQlyod8wY: Must provide source or customer.
-    extra_context = {
-        "STRIPE_PUBLIC_KEY": settings.STRIPE_PUBLIC_KEY
-    }
+    extra_context = {"STRIPE_PUBLIC_KEY": settings.STRIPE_PUBLIC_KEY}
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["order_obj"] = _get_user_order(self.request)
+        _dict = {
+            "order_obj": db_util.get_user_order(self.request),
+            "coupon_form": CouponForm(),
+            "DISPLAY_COUPON_FORM": False,
+        }
+        context.update(_dict)
         return context
-
-    def _update_order(self, order, payment):
-        order.ordered = True
-        order.payment = payment
-        order.save()
-
-    def _update_order_items(self, order):
-        order_items = order.items.all()
-        order_items.update(ordered=True)
-        for o_item in order_items:
-            o_item.save()
 
     def post(self, *args, **kwargs):
         stripe.api_key = settings.STRIPE_SECRET_KEY
-        order = _get_user_order(self.request)
+        order = db_util.get_user_order(self.request)
         if order is None:
             return redirect("shopping:home-page")
         # `source` is obtained with Stripe.js; see https://stripe.com/docs/payments/accept-a-payment-charges#web-create-token  # noqa: E501
@@ -173,12 +177,13 @@ class StripePaymentView(LoginRequiredMixin, TemplateView):
             payment_type="Stripe",
             payment_obj=charge,
             payment_id=charge.get("id"),
-            amount=amount
+            amount=amount,
         )
         payment.save()
 
-        self._update_order(order, payment)
-        self._update_order_items(order)
+        db_util.update_order_after_payment(order, payment)
+        db_util.update_order_items_after_payment(order)
+        db_util.update_coupon_after_payment(order)
         messages.success(
             self.request, "Your payment was successful and your order is on the way!"
         )
@@ -190,7 +195,7 @@ class PayPalPaymentView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["order_obj"] = _get_user_order(self.request)
+        context["order_obj"] = db_util.get_user_order(self.request)
         return context
 
 
@@ -199,7 +204,7 @@ class BitCoinPaymentView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["order_obj"] = _get_user_order(self.request)
+        context["order_obj"] = db_util.get_user_order(self.request)
         return context
 
 
@@ -209,25 +214,13 @@ class ItemDetailView(DetailView):
     context_object_name = "item_obj"
 
 
-def _filter_user_orders(request):
-    return Order.objects.filter(user=request.user, ordered=False)
-
-
-def _get_user_order(request):
-    try:
-        return Order.objects.get(user=request.user, ordered=False)
-    except ObjectDoesNotExist:
-        messages.error(request, "You do not have an active order")
-        return None
-
-
 @login_required
 def add_to_cart(request, slug):
     item = get_object_or_404(Item, slug=slug)
     order_item, order_item_created = OrderItem.objects.get_or_create(
         item=item, user=request.user, ordered=False
     )
-    order_qs = _filter_user_orders(request)
+    order_qs = db_util.filter_user_orders(request)
     if order_qs.exists():
         order = order_qs[0]  # only one order per user at a time?
         # check if order item is in the order
@@ -244,9 +237,9 @@ def add_to_cart(request, slug):
 
 def _increment_order_item_quantity(request, slug, value: int):
     item = get_object_or_404(Item, slug=slug)
-    order_item = OrderItem.objects.filter(
-        item=item, user=request.user, ordered=False
-    )[0]
+    order_item = OrderItem.objects.filter(item=item, user=request.user, ordered=False)[
+        0
+    ]
     order_item.quantity += value
     if order_item.quantity < 0:
         order_item.quantity = 0
@@ -277,3 +270,24 @@ def decrease_order_item_quantity(request, slug):
     else:
         order_item.save()
     return redirect("shopping:order-summary")
+
+
+class AddCouponView(LoginRequiredMixin, View):
+    def post(self, *args, **kwargs):
+        order = db_util.get_user_order(self.request)
+        if order is None:
+            return redirect("shopping:checkout-page")
+
+        form = CouponForm(self.request.POST or None)
+        if not form.is_valid():
+            return redirect("shopping:checkout-page")
+
+        code = form.cleaned_data.get("code")
+        coupon = db_util.get_coupon(self.request, code)
+        if coupon is not None and coupon.active:
+            order.coupon = coupon
+            order.save()
+            messages.success(self.request, "Your coupon was successfully processed")
+        elif not coupon.active:
+            messages.error(self.request, f"Coupon '{coupon.code}' is not active")
+        return redirect("shopping:checkout-page")
