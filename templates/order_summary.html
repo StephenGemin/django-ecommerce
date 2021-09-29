@@ -62,8 +62,8 @@
           {% endfor %}
         {% if order_obj.coupon %}
           <tr>
-            <td colspan="4"><b>Coupon</b></td>
-            <td><b>-$ {{ order.coupon.amount }}</b></td>
+            <td colspan="4"><b>Coupon - ({{ order_obj.coupon.code }})</b></td>
+            <td><b>-{{ order_obj.coupon.pretty_print_coupon }}</b></td>
           </tr>
         {% endif %}
         {% if order_obj.items.count > 0 %}
