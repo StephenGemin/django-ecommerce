@@ -120,6 +120,14 @@ class StripePaymentView(LoginRequiredMixin, TemplateView):
         context.update(_dict)
         return context
 
+    def get(self, request, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        if context["order_obj"].billing_address:
+            return self.render_to_response(context)
+        else:
+            messages.error(request, "You must add a billing address")
+            return redirect("shopping:checkout-page")
+
     def post(self, *args, **kwargs):
         stripe.api_key = settings.STRIPE_SECRET_KEY
         order = db_util.get_user_order(self.request)

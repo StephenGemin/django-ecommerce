@@ -27,23 +27,23 @@ class CheckoutForm(forms.Form):
     # )
 
     billing_address = forms.CharField(
-        required=False,  # TODO: temporary
+        required=True,
         widget=forms.TextInput(
             attrs={"placeholder": "1234 Main St", "class": "form-control"}
         ),
     )
     billing_address2 = forms.CharField(
-        required=False,  # TODO: temporary
+        required=False,
         widget=forms.TextInput(
             attrs={"placeholder": "Apartment or suite", "class": "form-control"}
         ),
     )
     billing_country = CountryField(blank_label="(select country)").formfield(
-        required=False,  # TODO: temporary
+        required=True,
         widget=CountrySelectWidget(attrs={"class": "custom-select d-block w-100"}),
     )
     billing_postal_code = forms.CharField(
-        required=False,  # TODO: temporary
+        required=True,
         max_length=6,
         widget=forms.TextInput(attrs={"class": "form-control"}),
     )
