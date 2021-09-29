@@ -82,11 +82,20 @@ class Order(models.Model):
     ordered = models.BooleanField(default=False)
     billing_address = models.ForeignKey('BillingAddress', on_delete=models.SET_NULL, blank=True, null=True)
     payment = models.ForeignKey("Payment", on_delete=models.SET_NULL, blank=True, null=True)
+    coupon = models.ForeignKey("Coupon", on_delete=models.SET_NULL, blank=True, null=True)
 
     def get_total(self):
         total = 0
         for order_item in self.items.all():
             total += order_item.get_final_price()
+        if self.coupon:
+            # percent
+            if self.coupon.discount_uom == constants.COUPON_DISCOUNT_UOM[0][0]:
+                total /= 1 + (self.coupon.discount_value / 100)
+            else:  # absolute
+                total -= self.coupon.discount_value
+            if total < 0:
+                total = 0
         return total
 
     def __str__(self):
@@ -115,3 +124,24 @@ class Payment(models.Model):
     def __str__(self):
         return f"{self.user.username} @ {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
 
+
+class Coupon(models.Model):
+    code = models.CharField(max_length=15)
+    active = models.BooleanField(default=False)
+    date_start = models.DateTimeField()
+    date_end = models.DateTimeField()
+    discount_value = models.FloatField()
+    discount_uom = models.CharField(choices=constants.COUPON_DISCOUNT_UOM, max_length=20)
+
+    # TODO: validation to make sure date_end > date_start
+    # TODO: validation to make sure if % then value <= 100
+    # TODO: map coupon or coupons to specific users, by region, birthday, etc??
+
+    def pretty_print_coupon(self) -> str:
+        if self.discount_uom == constants.COUPON_DISCOUNT_UOM[0][0]:  # percent
+            return f"{int(self.discount_value)}{self.get_discount_uom_display()}"
+        else:  # absolute
+            return f"{self.get_discount_uom_display()}{self.discount_value:.02f}"
+
+    def __str__(self):
+        return self.code

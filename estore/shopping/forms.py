@@ -64,3 +64,16 @@ class CheckoutForm(forms.Form):
     payment_option = forms.ChoiceField(
         choices=constants.PAYMENT_CHOICES, required=False, widget=forms.RadioSelect()
     )
+
+
+class CouponForm(forms.Form):
+    code = forms.CharField(
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Promo code",
+                "aria-label": "Recipient's username",
+                "aria-describedly": "basic-addon2",
+            }
+        )
+    )

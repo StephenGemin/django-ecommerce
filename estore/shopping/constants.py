@@ -17,3 +17,8 @@ PAYMENT_CHOICES = (
     ("PayPal", "PayPal"),
     ("BitCoin", "BitCoin"),
 )
+
+COUPON_DISCOUNT_UOM = (
+    ("percent", "%"),
+    ("absolute", "$"),
+)
