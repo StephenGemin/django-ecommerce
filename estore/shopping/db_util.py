@@ -21,11 +21,13 @@ def get_coupon(request, code):
         return None
 
     now = timezone.now()
-    if coupon.active and now > coupon.date_end:
-        return coupon
-    else:
-        messages.error(request, f"Coupon '{code}' is no longer valid")
+    if not coupon.active:
+        messages.error(request, f"Coupon '{code}' is no longer valid or active")
         return None
+    elif now > coupon.date_end:
+        messages.error(request, f"Coupon '{code}' has expired.")
+        return None
+    return coupon
 
 
 def filter_user_orders(request):
