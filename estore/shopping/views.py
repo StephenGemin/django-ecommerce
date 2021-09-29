@@ -284,10 +284,8 @@ class AddCouponView(LoginRequiredMixin, View):
 
         code = form.cleaned_data.get("code")
         coupon = db_util.get_coupon(self.request, code)
-        if coupon is not None and coupon.active:
+        if coupon is not None:
             order.coupon = coupon
             order.save()
             messages.success(self.request, "Your coupon was successfully processed")
-        elif not coupon.active:
-            messages.error(self.request, f"Coupon '{coupon.code}' is not active")
         return redirect("shopping:checkout-page")

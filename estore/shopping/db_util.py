@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist
+from django.utils import timezone
 
 from .models import Order, Coupon
 
@@ -14,9 +15,16 @@ def get_user_order(request):
 
 def get_coupon(request, code):
     try:
-        return Coupon.objects.get(code=code)
+        coupon = Coupon.objects.get(code=code)
     except ObjectDoesNotExist:
         messages.error(request, f"Coupon '{code}' does not exist")
+        return None
+
+    now = timezone.now()
+    if coupon.active and now > coupon.date_end:
+        return coupon
+    else:
+        messages.error(request, f"Coupon '{code}' is no longer valid")
         return None
 
 
