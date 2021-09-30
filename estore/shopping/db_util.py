@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
@@ -37,6 +39,7 @@ def filter_user_orders(request):
 def update_order_after_payment(order, payment):
     order.ordered = True
     order.payment = payment
+    order.ref_code = generate_ref_code()
     order.save()
 
 
@@ -53,3 +56,7 @@ def update_coupon_after_payment(order):
         return
     coupon.active = False
     coupon.save()
+
+
+def generate_ref_code():
+    return uuid.uuid4()

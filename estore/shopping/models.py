@@ -76,6 +76,7 @@ class OrderItem(models.Model):
 class Order(models.Model):
     """Shopping cart"""
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    ref_code = models.CharField(max_length=30)
     items = models.ManyToManyField(OrderItem)
     start_date = models.DateTimeField(auto_now_add=True)
     ordered_date = models.DateTimeField()
@@ -83,6 +84,10 @@ class Order(models.Model):
     billing_address = models.ForeignKey('BillingAddress', on_delete=models.SET_NULL, blank=True, null=True)
     payment = models.ForeignKey("Payment", on_delete=models.SET_NULL, blank=True, null=True)
     coupon = models.ForeignKey("Coupon", on_delete=models.SET_NULL, blank=True, null=True)
+    delivery = models.BooleanField(default=False)
+    received = models.BooleanField(default=False)
+    refund_request = models.BooleanField(default=False)
+    refund_complete = models.BooleanField(default=False)
 
     def get_total(self):
         total = 0

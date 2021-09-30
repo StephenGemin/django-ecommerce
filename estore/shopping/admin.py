@@ -4,11 +4,33 @@ from . import models as m
 
 
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ['user', 'ordered', 'ordered_date']
+    list_display = (
+        "user",
+        "ordered",
+        "ordered_date",
+        "delivery",
+        "received",
+        "refund_request",
+        "refund_complete",
+        "billing_address",
+        "payment",
+        "coupon",
+    )
+    list_display_links = ("user", "billing_address", "payment", "coupon")
+    list_filter = (
+        "user",
+        "ordered",
+        "ordered_date",
+        "delivery",
+        "received",
+        "refund_request",
+        "refund_complete",
+    )
+    search_fields = ("user__username", "ref_code")
 
 
 class OrderItemAdmin(admin.ModelAdmin):
-    list_display = ['item', 'quantity', 'ordered', 'user']
+    list_display = ["item", "quantity", "ordered", "user"]
 
 
 class BillAddressAdmin(admin.ModelAdmin):
@@ -16,7 +38,14 @@ class BillAddressAdmin(admin.ModelAdmin):
 
 
 class CouponAdmin(admin.ModelAdmin):
-    list_display = ["code", "active", "discount_value", "discount_uom", "date_start", "date_end"]
+    list_display = [
+        "code",
+        "active",
+        "discount_value",
+        "discount_uom",
+        "date_start",
+        "date_end",
+    ]
 
 
 admin.site.register(m.Item)
