@@ -1,3 +1,5 @@
+from contextlib import suppress
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -18,8 +20,8 @@ import stripe
 from stripe import error as stripe_error
 
 from . import db_util
-from .forms import CheckoutForm, CouponForm
-from .models import Item, OrderItem, Order, BillingAddress, Payment, Coupon
+from .forms import CheckoutForm, CouponForm, RefundForm
+from .models import Item, OrderItem, Order, BillingAddress, Payment, Refund
 
 
 class HomeView(ListView):
@@ -297,3 +299,45 @@ class AddCouponView(LoginRequiredMixin, View):
             order.save()
             messages.success(self.request, "Your coupon was successfully processed")
         return redirect("shopping:checkout-page")
+
+
+class RequestRefundView(LoginRequiredMixin, FormView):
+    form_class = RefundForm
+    template_name = "request_refund.html"
+
+    def post(self, request, *args, **kwargs):
+        form = self.get_form()
+        if not form.is_valid():
+            messages.error(self.request, "Invalid form entries, please try again")
+            return redirect("shopping-request-refund")
+
+        f_data = form.cleaned_data
+        ref_code = f_data.get("ref_code")
+        reason = f_data.get("reason")
+        email = f_data.get("email")
+        try:
+            order = Order.objects.get(ref_code=ref_code)
+        except ObjectDoesNotExist:
+            messages.error(
+                self.request, "Invalid reference code"
+            )
+            return redirect("shopping:request-refund")
+
+        order.refund_request = True
+        order.save()
+
+        with suppress(ObjectDoesNotExist):
+            refund = Refund.objects.get(order=order)
+            messages.info(
+                self.request, "Refund already request for given order reference code"
+            )
+            return redirect("shopping:home-page")
+
+        refund = Refund()
+        refund.order = order
+        refund.reason = reason
+        refund.email = email
+        refund.save()
+
+        messages.info(self.request, "Your request was received")
+        return redirect("shopping:home-page")

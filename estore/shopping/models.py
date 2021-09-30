@@ -87,7 +87,7 @@ class Order(models.Model):
     delivery = models.BooleanField(default=False)
     received = models.BooleanField(default=False)
     refund_request = models.BooleanField(default=False)
-    refund_complete = models.BooleanField(default=False)
+    refund_granted = models.BooleanField(default=False)
 
     def get_total(self):
         total = 0
@@ -104,7 +104,29 @@ class Order(models.Model):
         return total
 
     def __str__(self):
-        return f"{self.user.username} ordered={self.ordered}"
+        return f"{self.user.username} {self.ref_code}"
+
+
+class Coupon(models.Model):
+    code = models.CharField(max_length=15)
+    active = models.BooleanField(default=False)
+    date_start = models.DateTimeField()
+    date_end = models.DateTimeField()
+    discount_value = models.FloatField()
+    discount_uom = models.CharField(choices=constants.COUPON_DISCOUNT_UOM, max_length=20)
+
+    # TODO: validation to make sure date_end > date_start
+    # TODO: validation to make sure if % then value <= 100
+    # TODO: map coupon or coupons to specific users, by region, birthday, etc??
+
+    def pretty_print_coupon(self) -> str:
+        if self.discount_uom == constants.COUPON_DISCOUNT_UOM[0][0]:  # percent
+            return f"{int(self.discount_value)}{self.get_discount_uom_display()}"
+        else:  # absolute
+            return f"{self.get_discount_uom_display()}{self.discount_value:.02f}"
+
+    def __str__(self):
+        return self.code
 
 
 class BillingAddress(models.Model):
@@ -130,23 +152,11 @@ class Payment(models.Model):
         return f"{self.user.username} @ {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
 
 
-class Coupon(models.Model):
-    code = models.CharField(max_length=15)
-    active = models.BooleanField(default=False)
-    date_start = models.DateTimeField()
-    date_end = models.DateTimeField()
-    discount_value = models.FloatField()
-    discount_uom = models.CharField(choices=constants.COUPON_DISCOUNT_UOM, max_length=20)
-
-    # TODO: validation to make sure date_end > date_start
-    # TODO: validation to make sure if % then value <= 100
-    # TODO: map coupon or coupons to specific users, by region, birthday, etc??
-
-    def pretty_print_coupon(self) -> str:
-        if self.discount_uom == constants.COUPON_DISCOUNT_UOM[0][0]:  # percent
-            return f"{int(self.discount_value)}{self.get_discount_uom_display()}"
-        else:  # absolute
-            return f"{self.get_discount_uom_display()}{self.discount_value:.02f}"
+class Refund(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    reason = models.TextField()
+    accepted = models.BooleanField(default=False)
+    email = models.EmailField()
 
     def __str__(self):
-        return self.code
+        return str(self.order)

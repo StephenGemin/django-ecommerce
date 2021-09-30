@@ -3,6 +3,13 @@ from django.contrib import admin
 from . import models as m
 
 
+def accept_refund(modeladmin, request, queryset):
+    queryset.update(refund_request=False, refund_granted=True)
+
+
+accept_refund.short_description = "Update orders to grant refund"
+
+
 class OrderAdmin(admin.ModelAdmin):
     list_display = (
         "user",
@@ -11,7 +18,7 @@ class OrderAdmin(admin.ModelAdmin):
         "delivery",
         "received",
         "refund_request",
-        "refund_complete",
+        "refund_granted",
         "billing_address",
         "payment",
         "coupon",
@@ -24,9 +31,10 @@ class OrderAdmin(admin.ModelAdmin):
         "delivery",
         "received",
         "refund_request",
-        "refund_complete",
+        "refund_granted",
     )
     search_fields = ("user__username", "ref_code")
+    actions = [accept_refund]
 
 
 class OrderItemAdmin(admin.ModelAdmin):
@@ -54,3 +62,4 @@ admin.site.register(m.OrderItem, OrderItemAdmin)
 admin.site.register(m.BillingAddress, BillAddressAdmin)
 admin.site.register(m.Payment)
 admin.site.register(m.Coupon, CouponAdmin)
+admin.site.register(m.Refund)
