@@ -20,7 +20,7 @@ from django.views.generic import (
 import stripe
 from stripe import error as stripe_error
 
-from . import db_util
+from . import db_util, constants
 from .forms import CheckoutForm, CouponForm, RefundForm
 from .models import Item, OrderItem, Order, Address, Payment, Refund
 
@@ -52,7 +52,7 @@ class OrderSummaryView(LoginRequiredMixin, TemplateView):
 def is_valid_form(values):
     valid = True
     for field in values:
-        if field == '':
+        if field == "":
             valid = False
     return valid
 
@@ -61,13 +61,34 @@ class CheckoutView(LoginRequiredMixin, FormView):
     form_class = CheckoutForm
     template_name = "checkout-page.html"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        _dict = {
+            "order_obj": db_util.get_user_order(self.request),
+            "coupon_form": CouponForm(),
+            "DISPLAY_COUPON_FORM": True,
+        }
+        context.update(_dict)
+
+        shipping_address_qs = Address.objects.filter(
+            user=self.request.user, address_type="S", default=True
+        )
+        if shipping_address_qs.exists():
+            context.update({"default_shipping_address": shipping_address_qs[0]})
+
+        billing_address_qs = Address.objects.filter(
+            user=self.request.user, address_type="B", default=True
+        )
+        if billing_address_qs.exists():
+            context.update({"default_billing_address": billing_address_qs[0]})
+        return context
+
     def _validate_address(self, form, address: Address, address_type: str):
         fields = ["address", "country", "postal_code"]
         for f in fields:
             field_value = getattr(address, f)
-            if field_value == '' or field_value is None:
-                form.add_error(
-                    f"{address_type}_{f}", "Field must have a value")
+            if field_value == "" or field_value is None:
+                form.add_error(f"{address_type}_{f}", "Field must have a value")
 
         if address.address == "000":
             # This particular statement was added for testing purposes,
@@ -93,27 +114,42 @@ class CheckoutView(LoginRequiredMixin, FormView):
             "address_type": address_type,
         }
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        _dict = {
-            "order_obj": db_util.get_user_order(self.request),
-            "coupon_form": CouponForm(),
-            "DISPLAY_COUPON_FORM": True,
-        }
-        context.update(_dict)
+    def _process_form_address(
+        self, form, address_type: Tuple[str, str], use_default: bool, set_default: bool
+    ) -> Address:
+        addr_key, addr_value = address_type
+        if use_default:
+            try:
+                addr = Address.objects.get(
+                    user=self.request.user, default=True, address_type=addr_key
+                )
+            except ObjectDoesNotExist:
+                messages.error(
+                    self.request, f"No default {addr_value} address available"
+                )
+                return redirect("shopping:checkout-page")
+        else:
+            addr_data = self._get_address_data(form, addr_key)
+            try:
+                addr = Address.objects.get(**addr_data)
+            except ObjectDoesNotExist:
+                addr = Address(**addr_data)
 
-        shipping_address_qs = Address.objects.filter(
-            user=self.request.user, address_type="S", default=True
-        )
-        if shipping_address_qs.exists():
-            context.update({"default_shipping_address": shipping_address_qs[0]})
+            self._validate_address(form, addr, addr_value)
+            if not form.is_valid():
+                messages.error(self.request, f"Invalid {addr_value} address fields")
+                return self.form_invalid(form)
 
-        billing_address_qs = Address.objects.filter(
-            user=self.request.user, address_type="B", default=True
-        )
-        if billing_address_qs.exists():
-            context.update({"default_billing_address": billing_address_qs[0]})
-        return context
+        if set_default and addr.default is False:
+            with suppress(ObjectDoesNotExist):
+                current_default = Address.objects.get(
+                    user=self.request.user, default=True, address_type=addr_key
+                )
+                current_default.default = False
+                current_default.save()
+                addr.default = True
+        addr.save()
+        return addr
 
     def post(self, request, *args, **kwargs):
         """
@@ -129,72 +165,15 @@ class CheckoutView(LoginRequiredMixin, FormView):
         use_default_billing = form.cleaned_data.get("use_default_billing")
         set_default_billing = form.cleaned_data.get("set_default_billing")
 
-        if use_default_shipping:
-            try:
-                ship_addr = Address.objects.get(
-                    user=self.request.user, default=True, address_type="S"
-                )
-            except ObjectDoesNotExist:
-                messages.error(self.request, "No default shipping address available")
-                return redirect("shopping:checkout-page")
-        else:
-            ship_addr_data = self._get_address_data(form, "S")
-            try:
-                ship_addr_data.pop("address2")
-                ship_addr = Address.objects.get(**ship_addr_data)
-            except ObjectDoesNotExist:
-                ship_addr = Address(**ship_addr_data)
-                # messages.error(self.request, "New shipping address created")
-                # return redirect("shopping:checkout-page")
-
-            # breakpoint()
-            self._validate_address(form, ship_addr, "shipping")
-            if not form.is_valid():
-                messages.error(self.request, "Invalid shipping address fields")
-                return self.form_invalid(form)
-
-        if set_default_shipping and ship_addr.default is False:
-            with suppress(ObjectDoesNotExist):
-                current_default = Address.objects.get(
-                    user=self.request.user, default=True, address_type="S"
-                )
-                current_default.default = False
-                current_default.save()
-                ship_addr.default = True
-        ship_addr.save()
-
-        if use_default_billing:
-            try:
-                bill_addr = Address.objects.get(
-                    user=self.request.user, default=True, address_type="B"
-                )
-            except ObjectDoesNotExist:
-                messages.error(self.request, "No default billing address available")
-                return redirect("shopping:checkout-page")
-        else:
-            bill_addr_data = self._get_address_data(form, "B")
-            try:
-                bill_addr = Address.objects.get(**bill_addr_data)
-            except ObjectDoesNotExist:
-                bill_addr = Address(**bill_addr_data)
-                # messages.error(self.request, "New billing address created")
-                # return redirect("shopping:checkout-page")
-
-            self._validate_address(form, bill_addr, "billing")
-            if not form.is_valid():
-                messages.error(
-                    self.request, f"Invalid billing address fields\n{form.errors}")
-                return self.form_invalid(form)
-
-        if set_default_billing and bill_addr.default is False:
-            with suppress(ObjectDoesNotExist):
-                current_default = Address.objects.get(
-                    user=self.request.user, default=True, address_type="B"
-                )
-                current_default.default = False
-                current_default.save()
-                bill_addr.default = True
-        bill_addr.save()
+        ship_addr = self._process_form_address(
+            form,
+            constants.ADDRESS_CHOICES[1],
+            use_default_shipping,
+            set_default_shipping,
+        )
+        bill_addr = self._process_form_address(
+            form, constants.ADDRESS_CHOICES[0], use_default_billing, set_default_billing
+        )
 
         order = db_util.get_user_order(self.request)
         order.billing_address = bill_addr
@@ -420,9 +399,7 @@ class RequestRefundView(LoginRequiredMixin, FormView):
         try:
             order = Order.objects.get(ref_code=ref_code)
         except ObjectDoesNotExist:
-            messages.error(
-                self.request, "Invalid reference code"
-            )
+            messages.error(self.request, "Invalid reference code")
             return redirect("shopping:request-refund")
 
         order.refund_request = True
