@@ -20,10 +20,17 @@ class OrderAdmin(admin.ModelAdmin):
         "refund_request",
         "refund_granted",
         "billing_address",
+        "shipping_address",
         "payment",
         "coupon",
     )
-    list_display_links = ("user", "billing_address", "payment", "coupon")
+    list_display_links = (
+        "user",
+        "billing_address",
+        "shipping_address",
+        "payment",
+        "coupon",
+    )
     list_filter = (
         "user",
         "ordered",
@@ -41,8 +48,18 @@ class OrderItemAdmin(admin.ModelAdmin):
     list_display = ["item", "quantity", "ordered", "user"]
 
 
-class BillAddressAdmin(admin.ModelAdmin):
-    list_display = ["user", "address", "address2", "country", "postal_code"]
+class AddressAdmin(admin.ModelAdmin):
+    list_display = [
+        "user",
+        "address_type",
+        "address",
+        "address2",
+        "country",
+        "postal_code",
+        "default",
+    ]
+    list_filter = ["default", "address_type", "country"]
+    search_fields = ["user", "address", "address2", "postal_code"]
 
 
 class CouponAdmin(admin.ModelAdmin):
@@ -59,7 +76,7 @@ class CouponAdmin(admin.ModelAdmin):
 admin.site.register(m.Item)
 admin.site.register(m.Order, OrderAdmin)
 admin.site.register(m.OrderItem, OrderItemAdmin)
-admin.site.register(m.BillingAddress, BillAddressAdmin)
+admin.site.register(m.Address, AddressAdmin)
 admin.site.register(m.Payment)
 admin.site.register(m.Coupon, CouponAdmin)
 admin.site.register(m.Refund)

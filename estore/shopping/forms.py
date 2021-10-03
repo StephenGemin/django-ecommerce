@@ -7,62 +7,39 @@ from . import constants
 
 class CheckoutForm(forms.Form):
     # TODO: add functionality for these fields
-    # shipping_address = forms.CharField(
-    #     required=False,
-    #     widget=forms.TextInput(attrs={"placeholder": "1234 Main St", "class": "form-control"}),
-    # )
-    # shipping_address2 = forms.CharField(
-    #     required=False,
-    #     widget=forms.TextInput(attrs={"placeholder": "Apartment or suite", "class": "form-control"}),
-    # )
-    # shipping_country = CountryField(
-    #     blank_label="(select country)").formfield(
-    #     required=False,
-    #     widget=CountrySelectWidget(attrs={"class": "custom-select d-block w-100"})
-    # )
-    # shipping_postal_code = forms.CharField(
-    #     required=False,
-    #     max_length=6,
-    #     widget=forms.TextInput(attrs={"class": "form-control"})
-    # )
-
-    billing_address = forms.CharField(
-        required=True,
-        widget=forms.TextInput(
-            attrs={"placeholder": "1234 Main St", "class": "form-control"}
-        ),
-    )
-    billing_address2 = forms.CharField(
+    shipping_address = forms.CharField(required=False)
+    shipping_address2 = forms.CharField(required=False)
+    shipping_country = CountryField(blank_label="(select country)").formfield(
         required=False,
-        widget=forms.TextInput(
-            attrs={"placeholder": "Apartment or suite", "class": "form-control"}
-        ),
-    )
-    billing_country = CountryField(blank_label="(select country)").formfield(
-        required=True,
         widget=CountrySelectWidget(attrs={"class": "custom-select d-block w-100"}),
     )
-    billing_postal_code = forms.CharField(
-        required=True,
+    shipping_postal_code = forms.CharField(
+        required=False,
         max_length=6,
         widget=forms.TextInput(attrs={"class": "form-control"}),
     )
 
-    same_shipping_address = forms.BooleanField(
-        required=False, widget=forms.CheckboxInput()
+    billing_address = forms.CharField(required=False)
+    billing_address2 = forms.CharField(required=False)
+    billing_country = CountryField(blank_label="(select country)").formfield(
+        required=False,
+        widget=CountrySelectWidget(attrs={"class": "custom-select d-block w-100"}),
     )
-    set_default_billing = forms.BooleanField(
-        required=False, widget=forms.CheckboxInput()
+    billing_postal_code = forms.CharField(
+        required=False,
+        max_length=6,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
     )
 
-    # TODO: add functionality for commented fields
-    # set_default_shipping = forms.BooleanField(required=False)
-    # use_default_shipping = forms.BooleanField(required=False)
-    # use_default_billing = forms.BooleanField(required=False)
+    same_billing_address = forms.BooleanField(required=False)
+    set_default_billing = forms.BooleanField(required=False)
+    set_default_shipping = forms.BooleanField(required=False)
+    use_default_shipping = forms.BooleanField(required=False)
+    use_default_billing = forms.BooleanField(required=False)
 
     # TODO: temporary required value ... change back to True later
     payment_option = forms.ChoiceField(
-        choices=constants.PAYMENT_CHOICES, required=False, widget=forms.RadioSelect()
+        choices=constants.PAYMENT_CHOICES, widget=forms.RadioSelect()
     )
 
 

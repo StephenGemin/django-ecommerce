@@ -1,15 +1,15 @@
 CATEGORY_CHOICES = (
-    ('All', 'All'),
-    ('Outerwear', 'Outerwear'),
-    ('Shirt', 'Shirt'),
-    ('Sport', 'Sport'),
-    ('Sportwear', 'Sport wear'),
+    ("All", "All"),
+    ("Outerwear", "Outerwear"),
+    ("Shirt", "Shirt"),
+    ("Sport", "Sport"),
+    ("Sportwear", "Sport wear"),
 )
 
 LABEL_CHOICES = (
-    ('D', 'danger'),
-    ('P', 'primary'),
-    ('S', 'secondary'),
+    ("D", "danger"),
+    ("P", "primary"),
+    ("S", "secondary"),
 )
 
 PAYMENT_CHOICES = (
@@ -21,4 +21,9 @@ PAYMENT_CHOICES = (
 COUPON_DISCOUNT_UOM = (
     ("percent", "%"),
     ("absolute", "$"),
+)
+
+ADDRESS_CHOICES = (
+    ("B", "billing"),
+    ("S", "shipping"),
 )
