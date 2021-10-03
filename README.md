@@ -35,4 +35,11 @@ To install:
     ```shell
     $ python manage.py runserver
     ```
-6. Create items in DB from the admin page.
+6. Run the following two scripts to auto-populate users (not 
+   superuser/staff) and items to purchase
+    ```shell
+    $ python manage.py runscript add_users_to_db -v3
+    ```
+    ```shell
+    $ python manage.py runscript add_items_to_db -v3
+    ```
