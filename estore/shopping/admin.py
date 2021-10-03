@@ -44,6 +44,10 @@ class OrderAdmin(admin.ModelAdmin):
     actions = [accept_refund]
 
 
+class ItemAdmin(admin.ModelAdmin):
+    list_display = ["title", "price", "price_discount", "category", "label", "slug"]
+
+
 class OrderItemAdmin(admin.ModelAdmin):
     list_display = ["item", "quantity", "ordered", "user"]
 
@@ -73,7 +77,7 @@ class CouponAdmin(admin.ModelAdmin):
     ]
 
 
-admin.site.register(m.Item)
+admin.site.register(m.Item, ItemAdmin)
 admin.site.register(m.Order, OrderAdmin)
 admin.site.register(m.OrderItem, OrderItemAdmin)
 admin.site.register(m.Address, AddressAdmin)
