@@ -6,6 +6,7 @@ app_name = 'shopping'
 
 urlpatterns = [
     path('', views.HomeView.as_view(), name="home-page"),
+    path('category-view/<str:category>', views.HomeViewByCategory.as_view(), name="home-page-by-category"),
     path('checkout/', views.CheckoutView.as_view(), name="checkout-page"),
     path('checkout/add-coupon/', views.AddCouponView.as_view(), name="add-coupon"),
     path('payment/stripe/', views.StripePaymentView.as_view(), name="payment-stripe"),

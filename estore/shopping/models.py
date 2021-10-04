@@ -136,11 +136,12 @@ class Address(models.Model):
     address = models.CharField(max_length=100)
     address2 = models.CharField(max_length=100, blank=True)
     country = CountryField(multiple=False)
-    postal_code = models.CharField(max_length=6, unique=False)  # TODO: make unique
+    # TODO: make unique for production
+    postal_code = models.CharField(max_length=6, unique=False)
     default = models.BooleanField(default=False)
 
     def __str__(self):
-        return self.user.username
+        return f"{self.user.username}: {self.address}, {self.country}"
 
     class Meta:
         verbose_name_plural = "Addresses"

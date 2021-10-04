@@ -3,7 +3,7 @@ CATEGORY_CHOICES = (
     ("Outerwear", "Outerwear"),
     ("Shirt", "Shirt"),
     ("Sport", "Sport"),
-    ("Sportwear", "Sport wear"),
+    ("Sportwear", "Sport-wear"),
 )
 
 LABEL_CHOICES = (

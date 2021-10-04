@@ -32,6 +32,36 @@ class HomeView(ListView):
     ordering = ("price",)
     context_object_name = "items_obj"
 
+    def get_context_data(self, *, object_list=None, **kwargs):
+        context = super().get_context_data(**kwargs)
+        _dict = {
+            "categories": constants.CATEGORY_CHOICES
+        }
+        context.update(_dict)
+        return context
+
+
+class HomeViewByCategory(ListView):
+    model = Item
+    template_name = "home-page.html"
+    paginate_by = 10
+    ordering = ("price",)
+    context_object_name = "items_obj"
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        context = super().get_context_data(**kwargs)
+        _dict = {
+            "categories": constants.CATEGORY_CHOICES,
+            "active_category": self.kwargs.get("category")
+        }
+        context.update(_dict)
+        # breakpoint()
+        return context
+
+    def get_queryset(self):
+        category = self.kwargs.get("category")
+        return self.model.objects.filter(category=category).order_by("price")
+
 
 class OrderSummaryView(LoginRequiredMixin, TemplateView):
     model = Order

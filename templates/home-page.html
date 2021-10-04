@@ -161,21 +161,15 @@
 
           <!-- Links -->
           <ul class="navbar-nav mr-auto">
-            <li class="nav-item active">
-              <a class="nav-link" href="#">All
-                <span class="sr-only">(current)</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#">Shirts</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#">Sport wears</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#">Outwears</a>
-            </li>
-
+            {% for db_key, db_value in categories %}
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'shopping:home-page-by-category' db_key %}">{{ db_value }}
+                  {% if db_key == active_category %}
+                    <span class="sr-only">(current)</span>
+                  {% endif %}
+                </a>
+              </li>
+          {% endfor %}
           </ul>
           <!-- Links -->
 
@@ -214,7 +208,7 @@
                 <!--Card content-->
                 <div class="card-body text-center">
                   <!--Category & Title-->
-                  <a href="" class="grey-text">
+                  <a href="{{ item_obj.get_absolute_url }}" class="grey-text">
                     <h5>{{ item_obj.get_category_display }}</h5>
                   </a>
                   <h5>
